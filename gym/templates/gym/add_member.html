@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Member | FitTrack</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'gym/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Add New Member</h1>
+        
+        <form method="POST">
+            {% csrf_token %}
+            
+            <label>Name:</label>
+            <input type="text" name="name" placeholder="Full Name" required>
+
+            <label>Email:</label>
+            <input type="email" name="email" placeholder="example@gmail.com" required>
+
+            <label for="plan">Select Plan:</label>
+            <select name="plan" id="plan" required>
+                <option value="" disabled selected>-- Choose a Plan --</option>
+                {% for plan in plans %}
+                    <option value="{{ plan.id }}" data-months="{{ plan.duration_months }}">
+                        {{ plan.name }} — ₱{{ plan.price }} ({{ plan.duration_months }} Month{% if plan.duration_months > 1 %}s{% endif %})
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label>Start Date:</label>
+            <input type="date" name="start_date" id="start_date" required>
+
+            <label>Expiry Date:</label>
+            <input type="date" name="expiry_date" id="expiry_date" required>
+
+            <button type="submit" class="btn-primary">Add Member</button>
+        </form>
+        
+        <a href="{% url 'home' %}" class="back-link">← Back to Members</a>
+    </div>
+
+    <script>
+        const planSelect = document.getElementById('plan');
+        const startDateInput = document.getElementById('start_date');
+        const expiryDateInput = document.getElementById('expiry_date');
+
+        // Set today's date as default for Start Date
+        window.onload = function() {
+            const today = new Date().toISOString().split('T')[0];
+            startDateInput.value = today;
+        };
+
+        function calculateExpiry() {
+            const startDate = new Date(startDateInput.value);
+            const selectedOption = planSelect.options[planSelect.selectedIndex];
+            
+            // Get duration_months from the data attribute we added in the loop
+            const monthsToAdd = parseInt(selectedOption.getAttribute('data-months'));
+
+            if (!isNaN(startDate.getTime()) && monthsToAdd) {
+                // Add months
+                startDate.setMonth(startDate.getMonth() + monthsToAdd);
+                
+                // Format back to YYYY-MM-DD
+                expiryDateInput.value = startDate.toISOString().split('T')[0];
+            }
+        }
+
+        // Run calculation whenever Plan or Start Date changes
+        planSelect.addEventListener('change', calculateExpiry);
+        startDateInput.addEventListener('change', calculateExpiry);
+    </script>
+</body>
+</html>

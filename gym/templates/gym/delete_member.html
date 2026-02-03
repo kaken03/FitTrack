@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Member</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'gym/style.css' %}">
+</head>
+<body>
+    <div class="container" style="text-align: center;">
+    <h1 style="color: #c0392b;">Confirm Deletion</h1>
+    <p>Are you sure you want to delete the membership for <strong>{{ member.name }}</strong>?</p>
+    
+    <div class="info" style="margin-bottom: 20px;">
+        Email: {{ member.email }} <br>
+        Plan: {{ member.plan }}
+    </div>
+
+    <form method="POST" style="background: #fdf2f2; border: 1px solid #fab1a0;">
+        {% csrf_token %}
+        <button type="submit" style="background-color: #c0392b;">Yes, Delete Permanently</button>
+        <a href="{% url 'home' %}" class="back-link">Cancel and Go Back</a>
+    </form>
+</div>
+</body>
+</html>
