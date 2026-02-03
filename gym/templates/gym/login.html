@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login | FitTrack</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'gym/login.css' %}">
+</head>
+<body>
+<div class="container">
+    <h1>Sign in</h1>
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <label>Username</label>
+        <input type="text" name="username" required>
+        <label>Password</label>
+        <input type="password" name="password" required>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+            <button type="submit" class="btn btn-primary">Sign in</button>
+        </div>
+    </form>
+</div>
+</body>
+</html>

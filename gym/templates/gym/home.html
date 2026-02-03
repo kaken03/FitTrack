@@ -3,11 +3,17 @@
 <head>
     <title>FitTrack Gym Members</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'gym/style.css' %}">
+    <link rel="stylesheet" href="{% static 'gym/home.css' %}">
 </head>
 <body>
     <div class="container">
-        <a href="{% url 'add_member' %}" class="btn btn-primary">+ Add Member</a>
+        <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+            <div style="display:flex; gap:10px;">
+                <button id="open-add" class="btn btn-primary">+ Add Member</button>
+                <button id="open-plans" class="btn" style="border:1px solid #e2e8f0;">Manage Plans</button>
+            </div>
+            <a href="{% url 'logout' %}" class="btn" style="border:1px solid #e2e8f0;">Logout</a>
+        </div>
     <div class="header-flex">
         <h1>FitTrack Dashboard</h1>
         
@@ -30,40 +36,402 @@
     </form>
 
     <ul>
-        <div style="flex: 1; background: white;  text-align: center;">
-            <small style="color: #64748b; text-transform: uppercase;">Total Members</small>
-            <h2 style="margin: 5px 0; color: var(--primary);">{{ total_members }}</h2>
+        <div class="stats-container">
+            <a href="{% url 'home' %}" class="stat-box {% if not status_filter or status_filter == 'all' %}stat-active{% endif %}">
+                <small>Total Members</small>
+                <h2>{{ total_members }}</h2>
+            </a>
+            <a href="{% url 'home' %}?status=active" class="stat-box {% if status_filter == 'active' %}stat-active{% endif %}">
+                <small>Total Active</small>
+                <h2 style="color: var(--success);">{{ total_active }}</h2>
+            </a>
+            <a href="{% url 'home' %}?status=expired" class="stat-box {% if status_filter == 'expired' %}stat-active{% endif %}">
+                <small>Total Expired</small>
+                <h2 style="color: var(--danger);">{{ total_expired }}</h2>
+            </a>
         </div>
         {% for member in members %}
-        <li>
+        <li class="member-card {% if member.status == 'Active' %}member-active{% else %}member-inactive{% endif %}"
+            data-id="{{ member.id }}"
+            data-name="{{ member.name }}"
+            data-email="{{ member.email }}"
+            data-plan-id="{{ member.plan.id }}"
+            data-start-date="{{ member.start_date }}"
+            data-expiry-date="{{ member.expiry_date }}">
             <div class="member-info">
-                <strong class="member-name">{{ member.name }} 
-                    <span class="status-{% if member.status == 'Active' %}active{% else %}expired{% endif %}" style="margin-right: 15px;">
-                    ● {{ member.status }}
-                </span>
-            </strong>
-            <br><small style="color: #64748b;">{{ member.email }}</small></br>
-                <span style="font-size: 0.9rem; font-weight: bold; color: #1e293b;">
-                    {{ member.plan.name }} (₱{{ member.plan.price }})
-                </span>
-                <div class="days-badge">
-                    ⏳ {{ member.days_remaining }} days left
-                </div>
-                
+                <div class="member-name">{{ member.name }}</div>
+                <div class="member-email">{{ member.email }}</div>
+                <div class="member-plan">{{ member.plan.name }}</div>
+                <div class="days-badge">⏳ {{ member.days_remaining }} days left</div>
             </div>
-            
-            <div class="actions">
-                <!-- <span class="status-{% if member.status == 'Active' %}active{% else %}expired{% endif %}" style="margin-right: 15px;">
-                    ● {{ member.status }}
-                </span> -->
-                <a href="{% url 'edit_member' member.id %}" class="btn btn-outline">Edit</a>
-                <a href="{% url 'delete_member' member.id %}" class="btn btn-danger">Delete</a>
+
+            <div class="card-controls">
+                <button class="ellipsis-btn" aria-expanded="false" aria-label="More options">⋯</button>
+                <div class="card-menu" aria-hidden="true">
+                    <a href="{% url 'edit_member' member.id %}" class="menu-item" data-action="open-edit" data-member-id="{{ member.id }}">Edit</a>
+                    <a href="{% url 'delete_member' member.id %}" class="menu-item danger" data-action="open-delete" data-member-id="{{ member.id }}">Delete</a>
+                </div>
             </div>
         </li>
         {% empty %}
-            <p style="text-align: center; color: #64748b;">No members found.</p>
+            <p style="text-align: center; color: #64748b; padding: 40px 20px; font-size: 16px;">No members found.</p>
         {% endfor %}
     </ul>
-</div>
-</body>
-</html>
+
+    <!-- Modals -->
+    <!-- Add Member Modal -->
+    <div id="modal-add" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+            <button class="modal-close" data-close>&times;</button>
+            <!-- <h2 id="addModalTitle">Add New Member</h2> -->
+            <form id="add-form" method="POST" action="{% url 'add_member' %}">
+                {% csrf_token %}
+                <label>Name</label>
+                <input type="text" name="name" required>
+
+                <label>Email</label>
+                <input type="email" name="email" required>
+
+                <label for="add-plan">Plan</label>
+                <select name="plan" id="add-plan" required>
+                    <option value="" disabled selected>-- Choose a Plan --</option>
+                    {% for plan in plans %}
+                        <option value="{{ plan.id }}" data-months="{{ plan.duration_months }}">{{ plan.name }} — ₱{{ plan.price }} ({{ plan.duration_months }} month{% if plan.duration_months > 1 %}s{% endif %})</option>
+                    {% endfor %}
+                </select>
+
+                <label>Start Date</label>
+                <input type="date" name="start_date" id="add-start" required>
+
+                <label>Expiry Date</label>
+                <input type="date" name="expiry_date" id="add-expiry" required>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+                    <button type="button" class="btn" data-close>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div id="modal-edit" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+            <button class="modal-close" data-close>&times;</button>
+            <!-- <h2 id="editModalTitle">Edit Member</h2> -->
+            <form id="edit-form" method="POST">
+                {% csrf_token %}
+                <label>Name</label>
+                <input type="text" name="name" id="edit-name" required>
+
+                <label>Email</label>
+                <input type="email" name="email" id="edit-email" required>
+
+                <label for="edit-plan">Plan</label>
+                <select name="plan" id="edit-plan" required>
+                    <option value="" disabled>-- Choose a Plan --</option>
+                    {% for plan in plans %}
+                        <option value="{{ plan.id }}" data-months="{{ plan.duration_months }}">{{ plan.name }} — ₱{{ plan.price }} ({{ plan.duration_months }} month{% if plan.duration_months > 1 %}s{% endif %})</option>
+                    {% endfor %}
+                </select>
+
+                <label>Start Date</label>
+                <input type="date" name="start_date" id="edit-start" required>
+
+                <label>Expiry Date</label>
+                <input type="date" name="expiry_date" id="edit-expiry" required>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+                    <button type="button" class="btn" data-close>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="modal-delete" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+            <button class="modal-close" data-close>&times;</button>
+            <!-- <h2 id="deleteModalTitle">Confirm Deletion</h2> -->
+            <p>Are you sure you want to delete <strong id="delete-member-name"></strong>?</p>
+            <form id="delete-form" method="POST">
+                {% csrf_token %}
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+                    <button type="button" class="btn" data-close>Cancel</button>
+                    <button type="submit" class="btn" style="background:#c0392b;color:#fff;">Yes, Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Plans Manager Modal -->
+    <div id="modal-plans" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="plansModalTitle">
+            <!-- <button class="modal-close" data-close>&times;</button> -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <!-- <h2 id="plansModalTitle" style="margin:0;">Plans</h2> -->
+                <div>
+                    <button id="open-add-plan" class="btn btn-primary">+ Add Plan</button>
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <ul style="list-style:none; padding:0; margin:0;">
+                    {% for plan in plans %}
+                    <li class="plan-item" style="padding:12px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;" data-plan-id="{{ plan.id }}">
+                        <div style="flex:1; min-width:0;">
+                            <div class="plan-title" style="font-weight:700; white-space:normal; word-break:break-word;">{{ plan.name }}</div>
+                            <div class="plan-meta" style="font-size:12px; color:#64748b; margin-top:4px;">
+                                <span class="plan-price">₱{{ plan.price }}</span>
+                                <span class="plan-duration" style="margin-left:8px;">{{ plan.duration_months }} month{% if plan.duration_months > 1 %}s{% endif %}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-left:12px;">
+                            <button class="btn" data-plan-edit="{{ plan.id }}">Edit</button>
+                            <button class="btn" style="background:#c0392b;color:#fff;" data-plan-delete="{{ plan.id }}">Delete</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Plan Modal -->
+    <div id="modal-add-plan" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addPlanModalTitle">
+            <button class="modal-close" data-close>&times;</button>
+            <!-- <h2 id="addPlanModalTitle">Add Plan</h2> -->
+            <form id="add-plan-form" method="POST" action="{% url 'add_plan' %}">
+                {% csrf_token %}
+                <label>Name</label>
+                <input type="text" name="name" id="add-plan-name" required>
+                <label>Price</label>
+                <input type="number" step="0.01" name="price" id="add-plan-price" required>
+                <label>Duration (months)</label>
+                <input type="number" name="duration_months" id="add-plan-duration" min="1" value="1" required>
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+                    <button type="button" class="btn" data-close>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Plan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Plan Modal (populated dynamically) -->
+    <div id="modal-edit-plan" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editPlanModalTitle">
+            <button class="modal-close" data-close>&times;</button>
+            <!-- <h2 id="editPlanModalTitle">Edit Plan</h2> -->
+            <form id="edit-plan-form" method="POST">
+                {% csrf_token %}
+                <label>Name</label>
+                <input type="text" name="name" id="edit-plan-name" required>
+                <label>Price</label>
+                <input type="number" step="0.01" name="price" id="edit-plan-price" required>
+                <label>Duration (months)</label>
+                <input type="number" name="duration_months" id="edit-plan-duration" min="1" required>
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+                    <button type="button" class="btn" data-close>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Plan Modal (populated dynamically) -->
+    <div id="modal-delete-plan" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deletePlanModalTitle">
+            <button class="modal-close" data-close>&times;</button>
+            <!-- <h2 id="deletePlanModalTitle">Delete Plan</h2> -->
+            <p>Are you sure you want to delete <strong id="delete-plan-name"></strong>?</p>
+            <form id="delete-plan-form" method="POST">
+                {% csrf_token %}
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+                    <button type="button" class="btn" data-close>Cancel</button>
+                    <button type="submit" class="btn" style="background:#c0392b;color:#fff;">Yes, Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </div>
+    <script>
+            // Toggle per-card menu
+            document.addEventListener('click', function(e) {
+                // Close any open menus when clicking outside
+                document.querySelectorAll('.card-menu.show').forEach(function(m){
+                    if (!m.contains(e.target) && !m.previousElementSibling.contains(e.target)) {
+                        m.classList.remove('show');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.ellipsis-btn').forEach(function(btn){
+                btn.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    const menu = btn.nextElementSibling;
+                    const isShown = menu.classList.contains('show');
+                    // close other menus
+                    document.querySelectorAll('.card-menu.show').forEach(function(m){ m.classList.remove('show'); });
+                    if (!isShown) {
+                        menu.classList.add('show');
+                    } else {
+                        menu.classList.remove('show');
+                    }
+                });
+            });
+
+            // Prevent clicks inside menu from closing it
+            document.querySelectorAll('.card-menu').forEach(function(menu){
+                menu.addEventListener('click', function(e){ e.stopPropagation(); });
+            });
+
+            // Modal logic
+            function openModal(el) { el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+            function closeModal(el) { el.classList.remove('show'); el.setAttribute('aria-hidden','true'); }
+
+            // Plans manager wiring
+            (function(){
+                const openPlansBtn = document.getElementById('open-plans');
+                const openAddPlanBtn = document.getElementById('open-add-plan');
+                const plansModal = document.getElementById('modal-plans');
+                const addPlanModal = document.getElementById('modal-add-plan');
+                const editPlanModal = document.getElementById('modal-edit-plan');
+                const deletePlanModal = document.getElementById('modal-delete-plan');
+
+                if(openPlansBtn && plansModal){
+                    openPlansBtn.addEventListener('click', function(){ openModal(plansModal); });
+                }
+                if(openAddPlanBtn && addPlanModal){
+                    openAddPlanBtn.addEventListener('click', function(){ openModal(addPlanModal); });
+                }
+
+                // delegate edit/delete clicks inside plans modal
+                document.addEventListener('click', function(e){
+                    const editId = e.target.getAttribute && e.target.getAttribute('data-plan-edit');
+                    const delId = e.target.getAttribute && e.target.getAttribute('data-plan-delete');
+                    if(editId){
+                        const li = document.querySelector('[data-plan-id="'+editId+'"]');
+                        if(!li) return;
+                        const name = (li.querySelector('.plan-title') && li.querySelector('.plan-title').textContent) || '';
+                        const price = (li.querySelector('.plan-price') && li.querySelector('.plan-price').textContent.replace('₱','')) || '';
+                        const durationText = (li.querySelector('.plan-duration') && li.querySelector('.plan-duration').textContent) || '';
+                        const durationMatch = durationText.match(/(\d+)/);
+                        const duration = durationMatch ? durationMatch[0] : 1;
+                        document.getElementById('edit-plan-name').value = name.trim();
+                        document.getElementById('edit-plan-price').value = price.trim();
+                        document.getElementById('edit-plan-duration').value = duration;
+                        document.getElementById('edit-plan-form').action = '/plans/edit/' + editId + '/';
+                        openModal(editPlanModal);
+                    }
+                    if(delId){
+                        const li = document.querySelector('[data-plan-id="'+delId+'"]');
+                        if(!li) return;
+                        const name = (li.querySelector('.plan-title') && li.querySelector('.plan-title').textContent) || '';
+                        document.getElementById('delete-plan-name').textContent = name.trim();
+                        document.getElementById('delete-plan-form').action = '/plans/delete/' + delId + '/';
+                        openModal(deletePlanModal);
+                    }
+                });
+            })();
+
+            // Add modal: set today's date and wire expiry calc
+            const addModal = document.getElementById('modal-add');
+            const openAddBtn = document.getElementById('open-add');
+            const addStart = document.getElementById('add-start');
+            const addExpiry = document.getElementById('add-expiry');
+            const addPlan = document.getElementById('add-plan');
+
+            function setToday(input) {
+                const today = new Date().toISOString().split('T')[0];
+                input.value = today;
+            }
+
+            openAddBtn && openAddBtn.addEventListener('click', function(){
+                openModal(addModal);
+                setToday(addStart);
+                calculateExpiryFor(addStart, addPlan, addExpiry);
+            });
+
+            // Modal close handlers
+            document.querySelectorAll('[data-close]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    const overlay = btn.closest('.modal-overlay');
+                    if (overlay) closeModal(overlay);
+                });
+            });
+
+            // Close when clicking overlay background
+            document.querySelectorAll('.modal-overlay').forEach(function(ov){
+                ov.addEventListener('click', function(e){
+                    if (e.target === ov) closeModal(ov);
+                });
+            });
+
+            // Edit / Delete via modals
+            const editModal = document.getElementById('modal-edit');
+            const deleteModal = document.getElementById('modal-delete');
+            const editForm = document.getElementById('edit-form');
+            const deleteForm = document.getElementById('delete-form');
+
+            const editName = document.getElementById('edit-name');
+            const editEmail = document.getElementById('edit-email');
+            const editPlan = document.getElementById('edit-plan');
+            const editStart = document.getElementById('edit-start');
+            const editExpiry = document.getElementById('edit-expiry');
+            const deleteMemberName = document.getElementById('delete-member-name');
+
+            const editUrlTemplate = "{% url 'edit_member' 0 %}"; // '/edit/0/'
+            const deleteUrlTemplate = "{% url 'delete_member' 0 %}";
+
+            document.querySelectorAll('.menu-item[data-action]').forEach(function(link){
+                link.addEventListener('click', function(e){
+                    const action = link.getAttribute('data-action');
+                    const memberId = link.getAttribute('data-member-id');
+                    // find the corresponding list item for data
+                    const li = document.querySelector('.member-card[data-id="' + memberId + '"]');
+                    if (!li) return;
+                    e.preventDefault();
+                    // close menu
+                    link.closest('.card-menu').classList.remove('show');
+
+                    if (action === 'open-edit') {
+                        // populate edit form
+                        editName.value = li.getAttribute('data-name');
+                        editEmail.value = li.getAttribute('data-email');
+                        editPlan.value = li.getAttribute('data-plan-id');
+                        editStart.value = li.getAttribute('data-start-date');
+                        editExpiry.value = li.getAttribute('data-expiry-date');
+                        // set action url
+                        editForm.action = editUrlTemplate.replace('0', memberId);
+                        openModal(editModal);
+                    } else if (action === 'open-delete') {
+                        deleteMemberName.textContent = li.getAttribute('data-name');
+                        deleteForm.action = deleteUrlTemplate.replace('0', memberId);
+                        openModal(deleteModal);
+                    }
+                });
+            });
+
+            // Expiry calculation helper
+            function calculateExpiryFor(startInput, planSelectEl, expiryInput) {
+                const startDate = new Date(startInput.value);
+                const selectedOption = planSelectEl.options[planSelectEl.selectedIndex];
+                if (!selectedOption) return;
+                const monthsToAdd = parseInt(selectedOption.getAttribute('data-months')) || 0;
+                if (!isNaN(startDate.getTime()) && monthsToAdd) {
+                    const d = new Date(startDate);
+                    d.setMonth(d.getMonth() + monthsToAdd);
+                    expiryInput.value = d.toISOString().split('T')[0];
+                }
+            }
+
+            // Wire expiry calculation for add/edit
+            addPlan && addPlan.addEventListener('change', function(){ calculateExpiryFor(addStart, addPlan, addExpiry); });
+            addStart && addStart.addEventListener('change', function(){ calculateExpiryFor(addStart, addPlan, addExpiry); });
+
+            editPlan && editPlan.addEventListener('change', function(){ calculateExpiryFor(editStart, editPlan, editExpiry); });
+            editStart && editStart.addEventListener('change', function(){ calculateExpiryFor(editStart, editPlan, editExpiry); });
+        </script>
+    </body>
+    </html>

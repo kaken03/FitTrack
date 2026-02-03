@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone  # Make sure this line exists
 from datetime import date, timedelta
+from django.contrib.auth.models import User
 
 # Inside your Member class
 @property
@@ -15,6 +16,7 @@ class Plan(models.Model):
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     duration_months = models.IntegerField(default=1)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} - ₱{self.price}"
@@ -26,6 +28,7 @@ class Member(models.Model):
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True)
     start_date = models.DateField(default=date.today)
     expiry_date = models.DateField()
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.name

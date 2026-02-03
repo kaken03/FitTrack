@@ -3,10 +3,11 @@
 <head>
     <title>Add Member | FitTrack</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'gym/style.css' %}">
+    <link rel="stylesheet" href="{% static 'gym/edit_add_member.css' %}">
 </head>
 <body>
     <div class="container">
+        <a href="{% url 'home' %}" class="btn btn-primary">← Back</a>
         <h1>Add New Member</h1>
         
         <form method="POST">
@@ -36,8 +37,6 @@
 
             <button type="submit" class="btn-primary">Add Member</button>
         </form>
-        
-        <a href="{% url 'home' %}" class="back-link">← Back to Members</a>
     </div>
 
     <script>
